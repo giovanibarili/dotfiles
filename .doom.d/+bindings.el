@@ -8,6 +8,10 @@
 (define-key evil-motion-state-map (kbd "] e") #'flycheck-next-error)
 (define-key evil-motion-state-map (kbd "[ e") #'flycheck-previous-error)
 
+(with-eval-after-load 'vertico
+  (define-key vertico-map (kbd "<next>") #'vertico-scroll-up)
+  (define-key vertico-map (kbd "<prior>") #'vertico-scroll-down))
+
 (defun scroll-up-bottom-window ()
   "Scroll up bottom window"
   (interactive)
@@ -93,17 +97,27 @@
         :desc "Forward"
         "C-c <right>" #'paredit-forward))
 
-(map! :after clojure-mode
-      :leader
+(when (memq window-system '(mac ns x))
+  (global-set-key [home] 'beginning-of-line-text)
+  (global-set-key [end] 'move-end-of-line)
+  (global-set-key (kbd "<M-right>") 'right-word)
+  (global-set-key (kbd "<M-left>") #'left-word)
+  (global-set-key (kbd "<M-delete>") #'kill-word))
 
-      :desc "Search for symbol in project excluding test folders"
-      "&" (lambda () (interactive) (rg-ignoring-folders (list "test" "postman")))
+(after! clojure-mode
+  ;;(define-key lsp-mode-map (kbd "C-M-<up>") #'lsp-clojure-move-coll-entry-up)
+  ;;(define-key lsp-mode-map (kbd "C-M-<down>") #'lsp-clojure-move-coll-entry-down)
 
-      :desc "Search for symbol in project excluding src folder"
-      "(" (lambda () (interactive) (rg-ignoring-folders (list "src")))
+  (map! :leader
 
-      :desc "lsp-clojure cursor info"
-      "-" #'lsp-clojure-cursor-info)
+        :desc "Search for symbol in project excluding test folders"
+        "&" (lambda () (interactive) (rg-ignoring-folders (list "test" "postman")))
+
+        :desc "Search for symbol in project excluding src folder"
+        "(" (lambda () (interactive) (rg-ignoring-folders (list "src")))
+
+        :desc "lsp-clojure cursor info"
+        "-" #'lsp-clojure-cursor-info))
 
 (map! :after cider-mode
       :map cider-mode-map

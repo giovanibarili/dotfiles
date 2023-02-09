@@ -1,13 +1,23 @@
 ;;; ../.dotfiles/.doom.d/+functions.el -*- lexical-binding: t; -*-
 
+(defun font-exists-p (font)
+  (if (null (x-list-fonts font)) nil t))
+
 (defun rg-ignoring-folders (folders)
   "ripgrep selected word in project excluding folder"
-  (let ((symbol (thing-at-point 'symbol t))
-        (args (mapconcat 'identity
-                         (mapcar #'(lambda(folder) (concat "-g '!" folder "/*'"))
-                                 folders)
-                         " ")))
-    (counsel-rg symbol (counsel--git-root) args)))
+  (let ((symbol (rxt-quote-pcre (or (doom-thing-at-point-or-region) "")))
+        (dir (let ((projectile-project-root nil))
+               (if current-prefix-arg
+                   (if-let (projects (projectile-relevant-known-projects))
+                       (completing-read "Search project: " projects nil t)
+                     (user-error "There are no known projects"))
+                 (doom-project-root default-directory))))
+        (args (mapcar (lambda (folder) (concat "-g !" folder ""))
+                      folders)))
+    (+vertico-file-search
+      :query symbol
+      :in dir
+      :args '("-g" "!postman"))))
 
 (defun lsp-clojure-nrepl-connect ()
   "Connect to the running nrepl debug server of clojure-lsp."
@@ -72,3 +82,21 @@
                       target-branch
                       branch)))
     (browse-url url)))
+
+(defun magit-open-file-at-remote ()
+  (interactive)
+  (browse-url
+   (let
+       ((rev (magit-rev-abbrev "HEAD"))
+        (repo (forge-get-repository 'stub))
+        (file (magit-file-relative-name buffer-file-name))
+        (highlight
+         (if
+             (use-region-p)
+             (let ((l1 (line-number-at-pos (region-beginning)))
+                   (l2 (line-number-at-pos (- (region-end) 1))))
+               (format "#L%d-L%d" l1 l2))
+           (format "#L%s" (line-number-at-pos (point)))
+           )))
+     (forge--format repo "https://%h/%o/%n/blob/%r/%f%L"
+                    `((?r . ,rev) (?f . ,file) (?L . ,highlight))))))
